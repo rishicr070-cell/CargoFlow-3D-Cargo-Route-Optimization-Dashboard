@@ -7,6 +7,47 @@ const WEIGHT_LABELS = {
   travel_time: { label: 'Time', unit: 'hrs', color: '#f59e0b' },
 }
 
+function formatMetric(value, unit, position = 'suffix') {
+  if (value === null || value === undefined) return '—'
+  const formatted = Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  if (!unit) return formatted
+  return position === 'prefix' ? `${unit}${formatted}` : `${formatted} ${unit}`
+}
+
+function buildRouteInsight(weightMode, result) {
+  const wm = WEIGHT_LABELS[weightMode] || WEIGHT_LABELS.cost
+  const hopCount = Math.max((result.path?.length || 1) - 1, 1)
+
+  const averages = {
+    cost: result.total_cost / hopCount,
+    distance: result.total_distance / hopCount,
+    travel_time: result.total_time / hopCount,
+  }
+
+  const modeLines = {
+    cost: [
+      'This route is the lowest-total-cost option under the current network state.',
+      'It may still be longer or slower if that avoids expensive segments or surcharge-heavy hubs.',
+    ],
+    distance: [
+      'This route is the most distance-efficient option among the connected choices.',
+      'A shorter nautical path can still lose on time or cost if it crosses slower or pricier legs.',
+    ],
+    travel_time: [
+      'This route minimizes total transit time with the current congestion profile.',
+      'It can still be more expensive or longer if it avoids slower or more congested legs.',
+    ],
+  }
+
+  return {
+    title: `Why this route wins on ${wm.label.toLowerCase()}`,
+    summary: modeLines[weightMode] || modeLines.cost,
+    averages,
+    note:
+      'If distance, time, and cost are tightly correlated in the graph data, the same corridor can stay optimal across modes. That is a data-shape signal, not necessarily an algorithm bug.',
+  }
+}
+
 export default function RouteResultPanel() {
   const { dijkstraResult, weightMode, isRunning } = useStore()
 
@@ -53,7 +94,10 @@ export default function RouteResultPanel() {
     )
   }
 
-  const wm = WEIGHT_LABELS[weightMode] || WEIGHT_LABELS.cost
+  const selectedMode = dijkstraResult.weight_used || weightMode
+  const wm = WEIGHT_LABELS[selectedMode] || WEIGHT_LABELS.cost
+  const hopCount = Math.max((dijkstraResult.path?.length || 1) - 1, 0)
+  const routeInsight = buildRouteInsight(selectedMode, dijkstraResult)
 
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -63,21 +107,19 @@ export default function RouteResultPanel() {
       <div className="stats-grid">
         <div className="stat-item">
           <div className="stat-val" style={{ color: '#3b82f6' }}>
-            ₹{dijkstraResult.total_cost.toLocaleString()}
+            {formatMetric(dijkstraResult.total_cost, '₹', 'prefix')}
           </div>
           <div className="stat-key">Cost</div>
         </div>
         <div className="stat-item">
           <div className="stat-val" style={{ color: '#10b981' }}>
-            {dijkstraResult.total_distance.toLocaleString()}
-            <span style={{ fontSize: 10 }}>nm</span>
+            {formatMetric(dijkstraResult.total_distance, 'nm')}
           </div>
           <div className="stat-key">Distance</div>
         </div>
         <div className="stat-item">
           <div className="stat-val" style={{ color: '#f59e0b' }}>
-            {dijkstraResult.total_time.toLocaleString()}
-            <span style={{ fontSize: 10 }}>h</span>
+            {formatMetric(dijkstraResult.total_time, 'h')}
           </div>
           <div className="stat-key">Time</div>
         </div>
@@ -96,7 +138,50 @@ export default function RouteResultPanel() {
         padding: '5px 10px',
       }}>
         ⚡ Optimized by: <strong>{wm.label}</strong>
-        &nbsp;·&nbsp; {dijkstraResult.path.length} hops
+        &nbsp;·&nbsp; {hopCount} hops
+      </div>
+
+      {/* Route explanation */}
+      <div style={{
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.95), rgba(15,23,42,0.72))',
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        padding: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}>
+        <div className="section-header">{routeInsight.title}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          {routeInsight.summary.map((line) => (
+            <div key={line} style={{ marginBottom: 6 }}>{line}</div>
+          ))}
+        </div>
+        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+          <div className="stat-item">
+          <div className="stat-val" style={{ color: wm.color }}>
+              {formatMetric(routeInsight.averages[weightMode], wm.unit, weightMode === 'cost' ? 'prefix' : 'suffix')}
+            </div>
+            <div className="stat-key">Average per hop</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-val" style={{ color: 'var(--text-primary)' }}>
+              {hopCount}
+            </div>
+            <div className="stat-key">Transfers / legs</div>
+          </div>
+        </div>
+        <div style={{
+          fontSize: 11,
+          color: 'var(--text-muted)',
+          lineHeight: 1.6,
+          background: 'rgba(148,163,184,0.08)',
+          border: '1px solid rgba(148,163,184,0.16)',
+          borderRadius: 8,
+          padding: '10px 12px',
+        }}>
+          {routeInsight.note}
+        </div>
       </div>
 
       {/* Path sequence */}

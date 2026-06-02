@@ -115,7 +115,7 @@ export default function AlgorithmControls() {
       }}>
         <strong style={{ color: 'var(--text-secondary)' }}>Complexity</strong><br/>
         Time: O(E log V) · Space: O(V + E)<br/>
-        V = 42 ports · E = 75 sea lanes
+        V = 43 ports · E = 75 sea lanes
       </div>
     </div>
   )
