@@ -1,9 +1,9 @@
 import useStore from '../store/useStore'
 
 const WEIGHT_OPTIONS = [
-  { value: 'cost',        label: 'Total Cost ($)' },
-  { value: 'distance',    label: 'Distance (km)' },
-  { value: 'travel_time', label: 'Travel Time (min)' },
+  { value: 'cost',        label: 'Total Cost (INR/TEU)' },
+  { value: 'distance',    label: 'Distance (nautical miles)' },
+  { value: 'travel_time', label: 'Travel Time (hours)' },
 ]
 
 export default function AlgorithmControls() {
@@ -115,7 +115,7 @@ export default function AlgorithmControls() {
       }}>
         <strong style={{ color: 'var(--text-secondary)' }}>Complexity</strong><br/>
         Time: O(E log V) · Space: O(V + E)<br/>
-        Uses min-heap priority queue
+        V = 42 ports · E = 75 sea lanes
       </div>
     </div>
   )

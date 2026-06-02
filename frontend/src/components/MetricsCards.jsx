@@ -20,8 +20,8 @@ const CARD_CONFIGS = [
   {
     key: 'avg_edge_cost',
     label: 'Avg Edge Cost',
-    unit: '$',
-    icon: '$',
+    unit: '₹',
+    icon: '₹',
     color: '#10b981',
     desc: 'Per route segment',
   },

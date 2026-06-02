@@ -2,9 +2,9 @@ import { NODE_TYPE_COLORS } from '../utils/nodeColors'
 import useStore from '../store/useStore'
 
 const WEIGHT_LABELS = {
-  cost:        { label: 'Cost', unit: '$',   color: '#3b82f6' },
-  distance:    { label: 'Distance', unit: 'km',  color: '#10b981' },
-  travel_time: { label: 'Time', unit: 'min', color: '#f59e0b' },
+  cost:        { label: 'Cost', unit: '₹',   color: '#3b82f6' },
+  distance:    { label: 'Distance', unit: 'nm',  color: '#10b981' },
+  travel_time: { label: 'Time', unit: 'hrs', color: '#f59e0b' },
 }
 
 export default function RouteResultPanel() {
@@ -63,21 +63,21 @@ export default function RouteResultPanel() {
       <div className="stats-grid">
         <div className="stat-item">
           <div className="stat-val" style={{ color: '#3b82f6' }}>
-            ${dijkstraResult.total_cost}
+            ₹{dijkstraResult.total_cost.toLocaleString()}
           </div>
           <div className="stat-key">Cost</div>
         </div>
         <div className="stat-item">
           <div className="stat-val" style={{ color: '#10b981' }}>
-            {dijkstraResult.total_distance}
-            <span style={{ fontSize: 10 }}>km</span>
+            {dijkstraResult.total_distance.toLocaleString()}
+            <span style={{ fontSize: 10 }}>nm</span>
           </div>
           <div className="stat-key">Distance</div>
         </div>
         <div className="stat-item">
           <div className="stat-val" style={{ color: '#f59e0b' }}>
-            {dijkstraResult.total_time}
-            <span style={{ fontSize: 10 }}>m</span>
+            {dijkstraResult.total_time.toLocaleString()}
+            <span style={{ fontSize: 10 }}>h</span>
           </div>
           <div className="stat-key">Time</div>
         </div>
