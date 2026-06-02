@@ -1,7 +1,7 @@
 # CargoFlow 🚢
 
 > **Graph-Based Cargo Logistics Optimization System**  
-> A DAA (Design and Analysis of Algorithms) project implementing Dijkstra's shortest path, BFS/DFS traversal, and MST algorithms on a real cargo logistics network — visualized in an interactive 3D dashboard.
+> A DAA (Design and Analysis of Algorithms) project implementing Dijkstra's shortest path, BFS/DFS traversal, and MST algorithms on a real cargo logistics network — visualized in an interactive 3D Earth globe dashboard.
 
 ---
 
@@ -9,11 +9,11 @@
 
 | Feature | Description |
 |---|---|
-| 🌐 3D Graph | Interactive force-directed graph with 35 nodes and 70 edges |
-| ⚡ Dijkstra | Animated shortest path with glowing edges and flowing particles |
-| 🔍 Node Inspector | Click any node to see capacity, congestion, processing time |
-| 📊 Live Metrics | Network density, average cost, congestion level — always live |
-| ⚠️ Scenarios | Block nodes to simulate failures and see alternate routes instantly |
+| 🌍 3D Globe | Native Three.js interactive 3D Earth sphere with 43 real-world ports and 75 shipping lanes |
+| ⚡ Dijkstra | Animated shortest path with glowing arcs, flowing ship particles, and accurate nautical miles |
+| 🔍 Node Inspector | Click any port to see TEU capacity, congestion, processing time, and geographic coordinates |
+| 📊 Live Metrics | Network density, average TEU cost in ₹ (INR), congestion level — always live |
+| ⚠️ Scenarios | Block chokepoints (e.g., Suez Canal) to simulate failures and see alternate routes instantly |
 
 ---
 
@@ -30,8 +30,8 @@ Cargoshield DAA/
 │   │   ├── dijkstra.py         ← Dijkstra using heapq (priority queue)
 │   │   └── scenario.py         ← In-memory node blocking & congestion
 │   └── data/
-│       ├── nodes.json          ← 35 logistics nodes
-│       └── edges.json          ← 70 weighted edges
+│       ├── nodes.json          ← 43 real-world global maritime ports
+│       └── edges.json          ← 75 real-world shipping lanes with nautical distances
 │
 └── frontend/                   ← React + Vite Application
     ├── index.html
@@ -48,7 +48,7 @@ Cargoshield DAA/
         ├── utils/
         │   └── nodeColors.js   ← Node type → color/icon mapping
         └── components/
-            ├── Graph3D.jsx         ← 3D visualization (react-force-graph-3d)
+            ├── Graph3D.jsx         ← Custom Three.js 3D Globe visualization
             ├── TopBar.jsx          ← Header bar
             ├── Sidebar.jsx         ← Navigation + legend
             ├── AlgorithmControls.jsx  ← Source / target / weight dropdowns
@@ -114,16 +114,16 @@ Or just double-click **`frontend/start_frontend.bat`**
 ## 🧮 Algorithms Implemented
 
 ### ⚡ Dijkstra's Shortest Path — `Phase 1`
-Finds the minimum-cost (or minimum-distance / minimum-time) route between any two nodes.
+Finds the minimum-cost (or minimum-distance / minimum-time) route between any two global ports.
 
 - **Data structure:** Min-heap priority queue (`heapq`)
-- **Weight modes:** `cost`, `distance`, or `travel_time`
+- **Weight modes:** `cost` (INR/TEU), `distance` (Nautical Miles), or `travel_time` (Hours)
 - **Congestion handling:** `effective_weight = base_weight × congestion_multiplier`
 - **Time complexity:** O(E log V)
 - **Space complexity:** O(V + E)
 
 ```
-V = 35 nodes   →   O(70 × log 35) ≈ 357 operations
+V = 43 ports   →   O(75 × log 43) ≈ 405 operations
 ```
 
 ### 🔍 BFS / DFS — `Phase 2`
@@ -139,46 +139,40 @@ Minimum spanning tree — finds the lowest-cost way to connect all hubs.
 ### Node Properties
 ```json
 {
-  "node_id": "N01",
-  "node_name": "Port Alpha",
-  "node_type": "Port",
-  "capacity": 5000,
-  "congestion_level": 0.3,
-  "processing_time": 120,
+  "node_id": "IN-JNP",
+  "node_name": "JNPT (Nhava Sheva)",
+  "node_type": "Major Port",
+  "capacity": 7500000,
+  "congestion_level": 0.4,
+  "processing_time": 48,
   "status": "active",
-  "lat": 22.3,
-  "lng": 88.4
+  "lat": 18.944,
+  "lng": 72.953
 }
 ```
 
 ### Edge Properties
 ```json
 {
-  "edge_id": "E001",
-  "source": "N01",
-  "target": "N03",
-  "distance": 12,
-  "travel_time": 25,
-  "cost": 180,
-  "capacity": 3000,
-  "congestion_weight": 1.2,
+  "edge_id": "E01",
+  "source": "IN-JNP",
+  "target": "AE-JEA",
+  "distance": 1060,
+  "travel_time": 62,
+  "cost": 49800,
+  "capacity": 10000,
+  "congestion_weight": 1.1,
   "edge_status": "active"
 }
 ```
 
 ### Node Types
-| Type | Color | Count |
-|---|---|---|
-| Port | 🔵 Blue | 3 |
-| Terminal | 🟣 Purple | 4 |
-| Warehouse | 🟢 Green | 4 |
-| Depot | 🟡 Yellow | 3 |
-| Crane | 🩵 Cyan | 3 |
-| Yard Block | 🟠 Orange | 4 |
-| Gate | 🩷 Pink | 4 |
-| Customs Point | 🔴 Red | 3 |
-| Truck Hub | 🩵 Teal | 4 |
-| Distribution Center | 🟢 Lime | 3 |
+| Type | Color |
+|---|---|
+| Major Port | 🔵 Blue |
+| Transshipment Hub | 🟣 Purple |
+| Riverine Port | 🟢 Emerald |
+| Chokepoint | 🔴 Red |
 
 ---
 
@@ -203,20 +197,20 @@ Minimum spanning tree — finds the lowest-cost way to connect all hubs.
 ```bash
 curl -X POST http://localhost:8000/algorithm/dijkstra \
   -H "Content-Type: application/json" \
-  -d '{"source": "N01", "target": "N24", "weight": "cost"}'
+  -d '{"source": "IN-JNP", "target": "NL-RTM", "weight": "cost"}'
 ```
 
 **Response:**
 ```json
 {
-  "path": ["N01", "N07", "N34", "N18", ...],
-  "edges": ["E065", "E062", ...],
-  "total_cost": 320.5,
-  "total_distance": 19.0,
-  "total_time": 38.0,
+  "path": ["IN-JNP", "ZA-CPT", "NL-RTM"],
+  "edges": ["E05", "E75"],
+  "total_cost": 415000,
+  "total_distance": 10300.0,
+  "total_time": 606.0,
   "reachable": true,
   "path_info": [
-    { "node_id": "N01", "node_name": "Port Alpha", "node_type": "Port" },
+    { "node_id": "IN-JNP", "node_name": "JNPT (Nhava Sheva)", "node_type": "Major Port" },
     ...
   ]
 }
@@ -231,8 +225,7 @@ curl -X POST http://localhost:8000/algorithm/dijkstra \
 |---|---|
 | React 18 | Component-based UI |
 | Vite 8 | Dev server + bundler |
-| react-force-graph-3d | 3D force-directed graph |
-| Three.js | WebGL 3D rendering |
+| Three.js | Native WebGL 3D Earth Globe rendering |
 | Zustand | Global state management |
 | Axios | HTTP API client |
 | Vanilla CSS | Custom dark theme design system |
@@ -257,15 +250,15 @@ curl -X POST http://localhost:8000/algorithm/dijkstra \
 ├──────────┬───────────────────────────┬───────────────┤
 │ ◈ Overview │                           │  [Algorithm]  │
 │ ⬡ 3D Graph │                           │  Source  ▾    │
-│ ⚡ Algorithm│     3D FORCE GRAPH        │  Target  ▾    │
+│ ⚡ Algorithm│        3D GLOBE           │  Target  ▾    │
 │ ⚠ Scenario │    (interactive scene)    │  Weight  ▾    │
 │            │                           │  [Run ⚡]     │
 │  LEGEND    │                           │               │
-│  ● Port    │                           │  Route Result │
-│  ● Terminal│                           │  $320 | 19km  │
-│  ...       │                           │  N01→N07→...  │
+│  ● Major   │                           │  Route Result │
+│  ● Trans.  │                           │  ₹415,000     │
+│  ...       │                           │  JNP→CPT→...  │
 ├──────────┴───────────────────────────┴───────────────┤
-│  Metrics │ 35 Nodes │ 70 Edges │ $115.93 Avg │ 11.76% │  ← Bottom Bar
+│  Metrics │ 43 Ports │ 75 Routes │ ₹90,267 Avg │ 8.31% │  ← Bottom Bar
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -274,13 +267,13 @@ curl -X POST http://localhost:8000/algorithm/dijkstra \
 ## 🎬 Phase Plan
 
 ### ✅ Phase 1 — Complete
-- [x] 35-node, 70-edge cargo logistics dataset
+- [x] 43-node, 75-edge real-world global cargo logistics dataset
 - [x] Python FastAPI backend with REST API
 - [x] Dijkstra's algorithm with congestion weights
-- [x] Interactive 3D force-directed graph
-- [x] Animated shortest path highlighting (particles)
+- [x] Custom interactive Three.js 3D Earth globe visualization
+- [x] Animated shortest path highlighting (particles) along geographic curves
 - [x] Node detail inspector panel
-- [x] Live metrics cards
+- [x] Live metrics cards (with INR ₹ formatting)
 - [x] Scenario simulation (block nodes + re-route)
 
 ### 🔲 Phase 2 — Planned
@@ -293,22 +286,10 @@ curl -X POST http://localhost:8000/algorithm/dijkstra \
 
 ---
 
-## 📊 Network Stats (Live)
-
-```
-Total Nodes     :  35
-Total Edges     :  70
-Avg Edge Cost   :  $115.93
-Network Density :  11.76%   (of all possible connections)
-Avg Congestion  :  1.191×   (19.1% slowdown on average)
-```
-
----
-
 ## 📚 References
 
 - [Dijkstra's Algorithm — GeeksForGeeks](https://www.geeksforgeeks.org/dijkstras-shortest-path-algorithm-greedy-algo-7/)
-- [react-force-graph-3d — vasturiano](https://github.com/vasturiano/react-force-graph)
+- [Three.js Documentation](https://threejs.org/docs/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Prim's MST — GeeksForGeeks](https://www.geeksforgeeks.org/prims-minimum-spanning-tree-mst-greedy-algo-5/)
 
@@ -318,7 +299,7 @@ Avg Congestion  :  1.191×   (19.1% slowdown on average)
 
 **CargoFlow** — DAA Project  
 Inspired by CargoShield logistics optimization system.  
-Built with Python FastAPI + React Three.js for interactive graph visualization.
+Built with Python FastAPI + React Three.js for interactive geographic globe visualization.
 
 ---
 
