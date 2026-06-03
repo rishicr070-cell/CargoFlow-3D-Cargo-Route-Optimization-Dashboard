@@ -1,0 +1,509 @@
+CargoFlow / CargoShield DAA Project Overview
+
+This document explains the full structure of the project: system architecture, technology stack, file relationships, backend and frontend flow, data model, algorithms, and how the pieces connect.
+
+1. Project Summary
+
+This repository contains a two-part logistics visualization and optimization system:
+- A FastAPI backend that loads maritime graph data, exposes REST endpoints, and runs routing/scenario logic.
+- A React + Vite frontend that displays the cargo network in a 3D globe view and lets users run pathfinding and scenario simulations.
+
+The main purpose of the app is to analyze a cargo shipping network using graph algorithms, especially Dijkstra's shortest path, and visualize the results interactively.
+
+2. High-Level Architecture
+
+The project is split into these major layers:
+1. Data Layer
+   - JSON files store the graph nodes and edges.
+   - Scenario state is kept in memory in the backend.
+2. Backend Layer
+   - FastAPI serves graph data, metrics, node details, and algorithm outputs.
+   - Python modules load the graph and compute shortest paths.
+3. Frontend Layer
+   - React components render the dashboard layout.
+   - A global Zustand store manages application state.
+   - Axios calls the backend API through a Vite proxy.
+4. Visualization Layer
+   - Three.js renders the 3D Earth globe.
+   - Nodes, arcs, and path particles are drawn in the browser.
+
+3. Technology Stack
+
+Backend:
+- Python
+- FastAPI
+- Pydantic for request validation
+- Uvicorn as the ASGI server
+- Standard library modules like json, heapq, os, typing
+
+Frontend:
+- React
+- Vite
+- JavaScript / JSX
+- Zustand for state management
+- Axios for HTTP requests
+- Three.js for 3D visualization
+- react-force-graph-3d is listed as a dependency, though the current visible graph implementation is custom Three.js-based
+- Recharts is included for charting capability
+
+Project Tooling:
+- vite dev server
+- typescript is present in the frontend build pipeline, but the main UI files are mostly .jsx
+- Windows batch launchers for convenience:
+  - backend/start_backend.bat
+  - frontend/start_frontend.bat
+
+4. Repository Structure
+
+Root:
+- README.md
+  - Project description and setup instructions
+- Cargoshield DAA.txt
+  - Likely a project note or reference document
+- PROJECT_OVERVIEW.md
+  - Full markdown project reference
+- PROJECT_OVERVIEW.txt
+  - This plain-text version
+
+Backend:
+- backend/main.py
+  - FastAPI app entry point
+  - Defines API endpoints
+- backend/graph.py
+  - Loads graph data from JSON
+  - Builds adjacency list
+  - Computes graph metrics
+- backend/algorithms/dijkstra.py
+  - Dijkstra shortest path implementation
+- backend/algorithms/scenario.py
+  - In-memory scenario state for blocked nodes and congestion
+- backend/data/nodes.json
+  - Graph node dataset
+- backend/data/edges.json
+  - Graph edge dataset
+- backend/requirements.txt
+  - Python dependencies
+- backend/start_backend.bat
+  - Windows helper to start the backend
+
+Frontend:
+- frontend/index.html
+  - Vite HTML entry
+- frontend/vite.config.js
+  - Dev server and /api proxy configuration
+- frontend/package.json
+  - Frontend dependencies and scripts
+- frontend/src/main.jsx
+  - React entry point
+- frontend/src/App.jsx
+  - Main layout shell
+- frontend/src/index.css
+  - Main application styling
+- frontend/src/api/client.js
+  - Axios API client
+- frontend/src/store/useStore.js
+  - Zustand global state store
+- frontend/src/utils/nodeColors.js
+  - Node type colors and icons
+- frontend/src/components/
+  - UI components for dashboard sections
+    - Graph3D.jsx
+    - TopBar.jsx
+    - Sidebar.jsx
+    - AlgorithmControls.jsx
+    - NodeDetailPanel.jsx
+    - RouteResultPanel.jsx
+    - MetricsCards.jsx
+    - ScenarioPanel.jsx
+- frontend/public/
+  - Static assets
+
+5. Backend Architecture
+
+Entry Point:
+backend/main.py creates the FastAPI app and exposes the REST API.
+
+It imports:
+- load_graph, get_node_map, compute_metrics from graph.py
+- dijkstra from algorithms/dijkstra.py
+- scenario helpers from algorithms/scenario.py
+
+Backend Responsibilities:
+- loading node and edge data
+- applying scenario changes
+- building the adjacency list
+- computing graph summaries
+- running shortest path queries
+- serving node details
+
+API Endpoints:
+- GET /graph
+  - Returns nodes, edges, and current scenario state
+- GET /node/{node_id}
+  - Returns one node
+- GET /metrics
+  - Returns graph summary metrics
+- POST /algorithm/dijkstra
+  - Runs shortest path on the current graph
+- POST /scenario/block-node
+  - Blocks a node
+- POST /scenario/unblock-node
+  - Restores a node
+- POST /scenario/update-edge
+  - Changes an edge congestion weight
+- POST /scenario/reset
+  - Resets all scenario changes
+- GET /scenario
+  - Returns current scenario state
+- GET /
+  - Health / root response
+
+Data Loading Flow:
+backend/graph.py loads:
+- backend/data/nodes.json
+- backend/data/edges.json
+
+It then:
+1. removes blocked nodes
+2. removes edges connected to blocked nodes
+3. applies congestion overrides
+4. builds an adjacency list
+
+The adjacency list is what the algorithm consumes.
+
+Scenario State:
+backend/algorithms/scenario.py keeps state in memory:
+- blocked nodes
+- congested edges
+
+This state is not stored in a database. It resets when the backend restarts.
+
+Dijkstra Implementation:
+backend/algorithms/dijkstra.py:
+- uses heapq as a priority queue
+- supports three modes:
+  - cost
+  - distance
+  - travel_time
+- computes the shortest route based on the selected weight
+- reconstructs:
+  - path node IDs
+  - edge IDs
+  - total cost
+  - total distance
+  - total time
+
+Important detail:
+- the implementation multiplies the selected base weight by congestion_weight
+- this makes congestion affect all three optimization modes in a similar way
+
+That design choice is one reason the same route can appear across modes if the data is strongly correlated.
+
+6. Frontend Architecture
+
+Entry Flow:
+frontend/src/main.jsx
+- imports index.css
+- mounts App.jsx into the DOM
+
+App Shell:
+frontend/src/App.jsx is the top-level layout.
+
+It composes:
+- TopBar
+- Sidebar
+- Graph3D
+- right-side tab panel:
+  - AlgorithmControls
+  - RouteResultPanel
+  - NodeDetailPanel
+  - ScenarioPanel
+- MetricsCards
+
+On first render, it calls:
+- fetchGraph()
+- fetchMetrics()
+
+from the Zustand store.
+
+State Management:
+frontend/src/store/useStore.js is the central state layer.
+
+It stores:
+- graph nodes
+- graph edges
+- loading state
+- error state
+- selected source node
+- selected target node
+- selected optimization mode
+- Dijkstra result
+- hovered node
+- selected node
+- active view
+- right panel tab
+- metrics
+- scenario state
+
+It also provides actions:
+- fetchGraph
+- fetchMetrics
+- setSourceNode
+- setTargetNode
+- setWeightMode
+- setHoveredNode
+- setSelectedNode
+- setActiveView
+- setRightTab
+- runDijkstra
+- blockNode
+- unblockNode
+- resetScenario
+
+API Client:
+frontend/src/api/client.js
+- wraps Axios
+- uses baseURL: '/api'
+- relies on Vite proxy to forward requests to FastAPI
+
+API usage:
+- getGraph()
+- getMetrics()
+- runDijkstra(source, target, weight)
+- blockNode(node_id)
+- unblockNode(node_id)
+- updateEdge(edge_id, congestion_weight)
+- resetScenario()
+- getScenario()
+
+Vite Proxy:
+frontend/vite.config.js proxies /api to:
+- http://localhost:8000
+
+This means the frontend can call /api/graph, /api/metrics, etc., and Vite forwards them to the backend.
+
+7. Frontend Component Relationships
+
+Graph3D.jsx
+This is the visual center of the app.
+It:
+- initializes a Three.js scene
+- creates the globe, stars, atmosphere, and grid
+- renders nodes as spheres on the globe
+- renders shipping lanes as curved arcs
+- highlights the current shortest path
+- animates particles along the selected path
+- supports node hover and click interaction
+
+TopBar.jsx
+Shows:
+- app branding
+- dataset status
+- node and edge counts
+- scenario status
+- version label
+
+Sidebar.jsx
+Shows:
+- navigation section
+- node type legend
+
+AlgorithmControls.jsx
+Lets the user:
+- choose source node
+- choose destination node
+- choose optimization mode
+- run Dijkstra
+- swap source and destination
+
+RouteResultPanel.jsx
+Shows:
+- route stats
+- optimization mode badge
+- explanation of why the route won
+- path sequence
+
+This file is now the main explainability surface for the optimization result.
+
+NodeDetailPanel.jsx
+Shows a clicked node’s:
+- name
+- type
+- ID
+- capacity
+- processing time
+- congestion level
+- coordinates
+- block/unblock action
+
+MetricsCards.jsx
+Displays summary graph metrics such as:
+- total nodes
+- total edges
+- average edge cost
+- network density
+- average congestion
+
+ScenarioPanel.jsx
+Provides scenario controls for:
+- blocking nodes
+- changing edge congestion
+- resetting scenario state
+
+8. Data Model
+
+Node Data
+Each node contains fields like:
+- node_id
+- node_name
+- node_type
+- capacity
+- congestion_level
+- processing_time
+- status
+- lat
+- lng
+
+Edge Data
+Each edge contains fields like:
+- edge_id
+- source
+- target
+- distance
+- travel_time
+- cost
+- capacity
+- congestion_weight
+- edge_status
+
+Graph Characteristics
+The graph is loaded as an undirected network in the current implementation:
+- each edge is added to the adjacency list in both directions
+
+This is important because it simplifies routing, but it also reduces directional realism.
+
+9. How the Files Connect
+
+Backend Flow
+1. main.py receives a request
+2. It calls get_scenario_state() from scenario.py
+3. It passes scenario state into load_graph() in graph.py
+4. graph.py loads JSON data and builds nodes, edges, adjacency list
+5. For routing, main.py calls dijkstra() in algorithms/dijkstra.py
+6. The result is enriched with node metadata and returned as JSON
+
+Frontend Flow
+1. main.jsx mounts App.jsx
+2. App.jsx calls fetchGraph() and fetchMetrics() on mount
+3. useStore.js calls the Axios API client
+4. Axios sends requests to /api/*
+5. Vite proxies the request to the FastAPI server
+6. The backend responds with JSON
+7. Zustand stores the data
+8. Components re-render using the updated store values
+
+Visualization Flow
+1. Graph3D.jsx receives nodes and edges from the store
+2. It converts lat/lng into 3D positions
+3. It draws nodes on the globe
+4. It draws arcs for shipping lanes
+5. It highlights the Dijkstra path if one exists
+6. It animates particles along selected arcs
+
+10. Algorithm Notes
+
+Dijkstra
+The project currently focuses on Dijkstra shortest path routing.
+
+Strengths:
+- correct shortest-path structure
+- simple and fast for weighted graphs
+- works well for the current graph size
+
+Limitations in the current model:
+- cost, distance, and time are highly correlated in the dataset
+- congestion affects all modes similarly
+- node-level delays are not part of the route cost
+- the graph is undirected and therefore less realistic for maritime routing
+
+What the README Mentions
+The README also mentions:
+- BFS / DFS traversal
+- Prim's / Kruskal's MST
+
+But in the current visible codebase, Dijkstra is the only clearly implemented algorithm.
+
+11. Current Runtime Behavior
+
+The app expects:
+- backend running on http://localhost:8000
+- frontend running on http://localhost:5173
+
+The frontend fetches data immediately on load.
+
+If the backend is not running:
+- graph data will not load
+- metrics will not load
+- the UI may appear stuck in loading or empty states
+
+12. Important Design Observations
+
+Why the same route can appear for all modes
+The current data and routing model cause route similarity because:
+- distance, time, and cost are strongly correlated
+- congestion multiplies all modes similarly
+- there are no node costs
+- there is little route asymmetry
+
+So the algorithm is doing what it was designed to do, but the model is not expressive enough to produce very different winners across modes.
+
+Why the explainability UI was added
+The result panel now gives the user:
+- the selected optimization mode
+- a textual explanation
+- average per-hop metrics
+- a note about correlation in the dataset
+
+This helps interpret the result without changing the backend algorithm.
+
+13. Files Most Important to Understand First
+
+If you want to read the project in the best order, start here:
+1. backend/main.py
+2. backend/graph.py
+3. backend/algorithms/dijkstra.py
+4. backend/algorithms/scenario.py
+5. frontend/src/store/useStore.js
+6. frontend/src/api/client.js
+7. frontend/src/App.jsx
+8. frontend/src/components/Graph3D.jsx
+9. frontend/src/components/RouteResultPanel.jsx
+
+14. Setup Summary
+
+Backend:
+- cd backend
+- install requirements
+- run FastAPI with Uvicorn
+
+Frontend:
+- cd frontend
+- install npm dependencies
+- run Vite dev server
+
+The frontend uses a proxy, so the backend must be running at the same time.
+
+15. Short Version
+
+This project is a maritime cargo logistics dashboard with:
+- a FastAPI backend
+- a React/Vite frontend
+- a Three.js 3D Earth visualization
+- graph data stored in JSON
+- Dijkstra routing
+- scenario simulation for blocked nodes and congestion
+- Zustand state management
+- Axios-based backend communication
+
+The backend owns the graph and algorithms.
+The frontend owns the visual dashboard and user interaction.
